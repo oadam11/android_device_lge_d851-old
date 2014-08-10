@@ -1,9 +1,11 @@
-import /init.galbi.rc
-import /init.g3_product.rc
+import init.lge.usb.rc
 import /init.lge.svelte.rc
 
 on early-init
     mount debugfs debugfs /sys/kernel/debug
+
+    mkdir /firmware 0771 system system
+    symlink /data/tombstones /tombstones
 
 on init
     mkdir /persist 0771 system system
@@ -35,6 +37,14 @@ on init
     symlink /storage/emulated/legacy /sdcard
     symlink /storage/emulated/legacy /mnt/sdcard
     symlink /storage/emulated/legacy /storage/sdcard0
+    mkdir /storage/external_SD 0700 root root
+    mkdir /mnt/media_rw 0700 media_rw media_rw
+    mkdir /mnt/media_rw/external_SD 0700 media_rw media_rw
+    export EXTERNAL_ADD_STORAGE /storage/external_SD
+    export SECONDARY_STORAGE /storage/external_SD
+    setprop ro.ssbd.session /dev/block/platform/msm_sdcc.1/by-name/eksst
+    setprop ro.ssbd.offset 0
+
 
     exec /sbin/setup_fs_static \
         /dev/block/platform/msm_sdcc.1/by-name/userdata \
@@ -55,6 +65,24 @@ on init
 
 on fs
     mount_all fstab.g3
+
+    # Keeping following partitions outside fstab file. As user may not have
+    # these partition flashed on the device. Failure to mount any partition in fstab file
+    # results in failure to launch late-start class.
+
+    wait /dev/block/platform/msm_sdcc.1/by-name/cache
+    exec /system/bin/e2fsck -y /dev/block/platform/msm_sdcc.1/by-name/cache
+    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/cache /cache nosuid nodev noatime barrier=1 noauto_da_alloc errors=continue
+
+    wait /dev/block/platform/msm_sdcc.1/by-name/persist
+    exec /system/bin/e2fsck -y /dev/block/platform/msm_sdcc.1/by-name/persist
+    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/persist /persist nosuid nodev noatime barrier=1 noauto_da_alloc errors=continue
+
+    wait /dev/block/platform/msm_sdcc.1/by-name/modem
+    mount vfat /dev/block/platform/msm_sdcc.1/by-name/modem /firmware ro shortname=lower,uid=1000,gid=1000,dmask=227,fmask=337
+
+    write /sys/kernel/boot_adsp/boot 1
+
     exec /system/bin/tune2fs -u system -r 10240 /dev/block/platform/msm_sdcc.1/by-name/userdata
 
     mkdir /sns 0755 system system
@@ -83,6 +111,8 @@ on fs
     chown system system /sys/bus/i2c/devices/0-0036/lm3697_rt_mode
 
 on post-fs
+    export LD_PRELOAD /vendor/lib/libNimsWrap.so
+
     start sreadahead
    chown system lgkeyguard /sys/devices/virtual/input/lge_touch/keyguard
    chmod 664 /sys/devices/virtual/input/lge_touch/keyguard
@@ -94,7 +124,40 @@ on post-fs
    chmod 664 /sys/devices/virtual/input/lge_touch/ts_noise
    chmod 664 /sys/devices/virtual/input/lge_touch/quick_cover_status
    chown system system /sys/devices/virtual/input/lge_touch/quick_cover_status
-   mkdir /data/misc/audit 02750 system system	
+    mkdir /data/misc/audit 02750 system system	
+
+on post-fs-data
+    mkdir /data/tombstones 0775 system system
+    mkdir /tombstones/modem 0771 system system
+    mkdir /tombstones/lpass 0771 system system
+    mkdir /tombstones/wcnss 0771 system system
+    mkdir /tombstones/dsps 0771 system system
+    mkdir /data/logger 0775 system system
+    mkdir /sns/cal/ 0644 system system
+    mkdir /sns/touch/ 0775 system system
+
+    mkdir /persist-lg/multimedia 0770 media divxdrm
+    chown media divxdrm /persist-lg/multimedia
+    chmod 0770 /persist-lg/multimedia
+
+    mkdir /persist-lg/multimedia/nx 0770 media divxdrm
+    chown media divxdrm /persist-lg/multimedia/nx
+    chmod 0770 /persist-lg/multimedia/nx
+
+    mkdir /persist-lg/multimedia/uma 0770 media divxdrm
+    chown media divxdrm /persist-lg/multimedia/uma
+    chmod 0770 /persist-lg/multimedia/uma
+
+    mkdir /persist-lg/multimedia/scnt 0770 media divxdrm
+    chown media divxdrm /persist-lg/multimedia/scnt
+    chmod 0770 /persist-lg/multimedia/scnt
+
+    mkdir /persist-lg/multimedia/scnt/sdadf 0770 media divxdrm
+    chown media divxdrm /persist-lg/multimedia/scnt/sdadf
+    chmod 0770 /persist-lg/multimedia/scnt/sdadf
+
+    chown system system /mpt
+    chmod 0775 /mpt
 
 on early-boot
     # set RLIMIT_MEMLOCK to 64MB
@@ -108,6 +171,23 @@ on early-boot
     write /sys/module/lowmemorykiller/parameters/lmk_fast_run 0
 
 on boot
+    insmod /system/lib/modules/adsprpc.ko
+
+    # BCM
+    chown bluetooth net_bt_stack /sys/class/rfkill/rfkill0/type
+    chown bluetooth net_bt_stack /sys/class/rfkill/rfkill0/state
+    chown bluetooth net_bt_stack /proc/bluetooth/sleep/btwake
+    chown bluetooth net_bt_stack /proc/bluetooth/sleep/proto
+    chmod 0660 /sys/class/rfkill/rfkill0/state
+    chmod 0660 /proc/bluetooth/sleep/btwake
+    chmod 0660 /proc/bluetooth/sleep/proto
+    chown bluetooth net_bt_stack /dev/ttyHS99
+    chmod 0660 /sys/module/hci_uart/parameters/ath_lpm
+    chmod 0660 /sys/module/hci_uart/parameters/ath_btwrite
+    chmod 0660 /dev/ttyHS99
+    setprop bluetooth.chip.vendor brcm
+    setprop ro.fm.module BCM
+
     # vibrator
     chown system system /sys/class/timed_output/vibrator/amp
     chmod 0660 /sys/class/timed_output/vibrator/amp
@@ -149,6 +229,33 @@ on boot
     chmod 644 /sys/class/graphics/fb0/mdp/vfps_trigger
     chown system system /sys/class/graphics/fb0/mdp/vfps_sts
     chmod 644 /sys/class/graphics/fb0/mdp/vfps_trigger
+
+# Re-define TCP buffer size for TMUS network.
+# ReadMin, ReadInitial, ReadMax, WriteMin, WriteInitial, WriteMax
+    setprop net.tcp.buffersize.default 4096,87380,524288,4096,16384,110208
+    setprop net.tcp.buffersize.edge    4093,26280,704512,4096,16384,110208
+    setprop net.tcp.buffersize.gprs    4092,8760,704512,4096,8760,110208
+    setprop net.tcp.buffersize.umts    4094,87380,704512,4096,16384,110208
+    setprop net.tcp.buffersize.hsdpa   4092,87380,704512,4096,16384,110208
+    setprop net.tcp.buffersize.hsupa   4092,87380,704512,4096,16384,110208
+    setprop net.tcp.buffersize.hspa    4092,87380,704512,4096,16384,110208
+	setprop net.tcp.buffersize.hspap   4092,87380,704512,4096,16384,110208
+    setprop net.tcp.buffersize.lte     4094,87380,2560000,4096,16384,1220608
+    setprop net.tcp.buffersize.wifi    4096,221184,3461120,4096,221184,3461120
+
+	write /sys/class/leds/lcd-backlight/brightness 177
+
+# Bluetooth tethering
+    setprop bluetooth.pan true
+
+# MPDN
+    setprop ro.support_mpdn true
+
+    mkdir /data/connectivity 0775 system system
+    mkdir /data/connectivity/nsrm 0775 system system
+
+    write /proc/sys/net/core/rmem_max  3461120
+    write /proc/sys/net/core/wmem_max  3461120
 
     # lp5521
     chown system system /sys/devices/f9967000.i2c/i2c-0/0-0032/led_current_index
@@ -358,6 +465,11 @@ on post-fs-data
 # Services start here
 #
 
+service adsprpcd /system/bin/adsprpcd
+   class main
+   user media
+   group media
+
 service amp_init /system/bin/amploader -i
     class late_start
     user root
@@ -376,14 +488,34 @@ service amp_unload /system/bin/amploader -u
     disabled
     oneshot
 
+service atd /system/bin/atd /dev/ttyGS0 /dev/smd0
+   socket atd stream 0660 system inet
+   disabled
+
 service atfwd /system/bin/ATFWD-daemon
     class late_start
     user system
     group system radio
     onrestart /system/bin/log -t RIL-ATFWD -p w "ATFWD daemon restarted"
 
+service audiod /system/bin/audiod
+   class late_start
+   user system
+   group system
+
 service auditd /system/bin/auditd -k
     class main
+
+service battery_monitor /system/bin/battery_monitor
+    user system
+    group system
+    disabled
+
+service bdaddr_loader /system/bin/bdaddr_loader
+    user root
+    group bluetooth net_bt_admin misc net_bt_stack
+    disabled
+    oneshot
 
 service bluetoothd /system/bin/logwrapper /system/bin/bluetoothd -n
     class main
@@ -426,10 +558,17 @@ service bt-sap /system/bin/sapd 15
     disabled
     oneshot
 
+service bt_hsic_control /system/bin/sh /system/etc/hsic.control.bt.sh
+    user root
+    disabled
+
 service bugreport /system/bin/bugmailer.sh -v
     class main
     disabled
     oneshot
+
+service charger /charger
+    class charger
 
 service cnd /system/bin/cnd
     class late_start
@@ -509,10 +648,72 @@ service dsqn /system/bin/dsqn
     disabled
     user root
 
+service fastmmi /system/bin/mmi
+    user root
+    group root
+    disabled
+    oneshot
+
+service fastmmisrv /system/bin/sh /init.galbi.factory.sh
+    user root
+    disabled
+    oneshot
+
+service ftm_ptt /system/bin/ftm_ptt -d
+    class late_start
+    user root
+    group radio
+    disabled
+    oneshot
+
 service ftmd /system/bin/logwrapper /system/bin/ftmdaemon
     class late_start
     user root
     group bluetooth net_bt_admin misc net_bt_stack qcom_diag
+    disabled
+    oneshot
+
+service fuse_external_SD /system/bin/sdcard -u 1023 -g 1023 -w 1023 -d /mnt/media_rw/external_SD /storage/external_SD
+    class late_start
+    disabled
+
+service fuse_USBstorage1 /system/bin/sdcard -u 1023 -g 1023 -d /mnt/media_rw/USBstorage1 /storage/USBstorage1
+    class late_start
+    disabled
+
+service fuse_USBstorage2 /system/bin/sdcard -u 1023 -g 1023 -d /mnt/media_rw/USBstorage2 /storage/USBstorage2
+    class late_start
+    disabled
+
+service fuse_USBstorage3 /system/bin/sdcard -u 1023 -g 1023 -d /mnt/media_rw/USBstorage3 /storage/USBstorage3
+    class late_start
+    disabled
+
+service fuse_USBstorage4 /system/bin/sdcard -u 1023 -g 1023 -d /mnt/media_rw/USBstorage4 /storage/USBstorage4
+    class late_start
+    disabled
+
+service fuse_USBstorage5 /system/bin/sdcard -u 1023 -g 1023 -d /mnt/media_rw/USBstorage5 /storage/USBstorage5
+    class late_start
+    disabled
+
+service fuse_USBstorage6 /system/bin/sdcard -u 1023 -g 1023 -d /mnt/media_rw/USBstorage6 /storage/USBstorage6
+    class late_start
+    disabled
+
+service gbmonitor /system/bin/gbmonitor
+   class main
+   user system
+   group system
+
+service gsiff_daemon /system/bin/gsiff_daemon
+    class late_start
+    user gps
+    group gps net_raw misc
+
+service hcidump /system/bin/sh /system/etc/hcidump.sh
+    user bluetooth
+    group bluetooth system net_bt_admin net_admin
     disabled
     oneshot
 
@@ -526,6 +727,11 @@ service hostapd /system/bin/hostapd -dddd /data/hostapd/hostapd.conf
     user root
     group root
     oneshot
+    disabled
+
+service ims_regmanager /system/bin/exe-ims-regmanagerprocessnative
+    class late_start
+    group qcom_oncrpc net_bt_admin inet radio wifi
     disabled
 
 service immvibed /system/bin/immvibed
@@ -549,6 +755,16 @@ service iprenew_wlan0 /system/bin/dhcpcd -n
     disabled
     oneshot
 
+service ipsecclient /system/bin/ipsecclient
+    class main
+    group system net_admin net_raw
+    disabled
+
+service ipsecstarter /system/bin/ipsecstarter
+    class main
+    user system
+    group system net_admin net_raw
+
 service irsc_util /system/bin/logwrapper /system/bin/irsc_util "/etc/sec_config"
     class main
     user root
@@ -559,16 +775,81 @@ service last_kmsg_backup /system/bin/sh /system/etc/last_kmsg_backup.sh
     disabled
     oneshot
 
+service lg_dm_router1 /system/bin/lg_dm_router 1
+    class late_start
+    user system
+    group system sdcard_r sdcard_rw
+    disabled
+    oneshot
+
+service lg_dm_router2 /system/bin/lg_dm_router 2
+    class late_start
+    user system
+    group system
+    disabled
+    socket Full.DM.port stream 660 system system
+
+service lg_odm_service /system/bin/lg_odm_service
+    class late_start
+    user system
+    group system net_raw sdcard_r sdcard_rw
+    disabled
+    oneshot
+    socket Full.ODM.port stream 660 system system
+
 service location_mq /system/bin/location-mq
     class late_start
     user gps
     group gps
     disabled
 
+service log-kernel /system/bin/sh /system/bin/logger_kernel.sh
+    class main
+    disabled
+    oneshot
+
+service log-power /system/bin/sh /system/bin/logger_power.sh
+    class main
+    disabled
+    oneshot
+
 service lowi-server /system/bin/lowi-server
     class late_start
     user gps
     group gps net_admin wifi inet
+    disabled
+
+service moca_restart /system/bin/moca_restart
+    class late_start
+    user root 
+    group system sdcard_r sdcard_rw radio
+    disabled
+    oneshot
+
+service moca_service /system/bin/moca -s
+    class late_start
+    user root 
+    group system sdcard_r sdcard_rw radio
+    disabled
+    oneshot
+    socket Full.MOCA.port stream 660 system system
+
+service moca_service_disable /system/bin/moca -k
+    class late_start
+    user root
+    group system sdcard_r sdcard_rw radio
+    disabled
+    oneshot
+
+service moca_ssr_ramdump /system/bin/subsystem_ramdump 1
+    class late_start
+    user system
+    group system sdcard_r sdcard_rw radio
+    disabled
+    oneshot
+
+service mpdecision /system/bin/mpdecision --avg_comp
+    user root
     disabled
 
 service mtsd /system/bin/mtsd
@@ -615,6 +896,22 @@ service pppoe_extd /system/bin/pppoe_extd
     disabled
     oneshot
 
+service profiler_daemon /system/bin/profiler_daemon
+    class late_start
+    user root
+    group root
+    disabled
+
+service qcamerasvr /system/bin/mm-qcamera-daemon
+    class late_start
+    user camera
+    group camera system inet input graphics
+
+service qgesturesvr /system/bin/mm-gesture-daemon
+    class late_start
+    user system
+    group system camera input graphics net_bt_stack
+
 service qcom-c_core-sh /system/bin/sh /init.galbi.class_core.sh
     class core
     user root
@@ -653,6 +950,28 @@ service qmuxd /system/bin/qmuxd
     group radio audio bluetooth gps qcom_diag
     disabled
 
+service qosmgrd /system/bin/qosmgr /system/etc/qosmgr_rules.xml
+   user system
+   group system
+   disabled
+
+service qrngd /system/bin/qrngd -f
+   class main
+   user root
+   group root
+
+service qrngp /system/bin/qrngp
+    class main
+    user root
+    group root
+    oneshot
+    disabled
+
+service qseecomd /system/bin/qseecomd
+    class late_start
+    user root
+    group root
+
 service quipc_igsn /system/bin/quipc_igsn
     class late_start
     user gps
@@ -668,6 +987,14 @@ service quipc_main /system/bin/quipc_main
 service recovery_write /sbin/write_recovery
     class main
     oneshot
+
+service ril-daemon1 /system/bin/rild -c 1
+    class main
+    socket rild1 stream 660 root radio
+    socket rild-debug1 stream 660 radio system
+    user root
+    disabled
+    group radio cache inet misc audio sdcard_r sdcard_rw qcom_oncrpc diag qcom_diag log net_raw
 
 service ril-qmi /system/bin/sh /init.galbi.ril.sh
     class main
@@ -689,11 +1016,15 @@ service runtime_boot_res /system/vendor/bin/runtime_boot_res.sh
     disabled
     oneshot
 
-service set_emmc_size /system/bin/sh /set_emmc_size.sh
-    class main
-    user root
-    group media_rw system sdcard_rw
-    disabled
+service sdcard /system/bin/sdcard -u 1023 -g 1023 -l /data/media /mnt/shell/emulated
+    class late_start
+
+service security-check1 /sbin/security_boot_check system
+    class core
+    oneshot
+
+service security-check2 /sbin/security_boot_check recovery
+    class core
     oneshot
 
 service sensors /system/bin/sensors.qcom
@@ -701,6 +1032,75 @@ service sensors /system/bin/sensors.qcom
     user root
     group root
     disabled
+
+service service-crash /system/bin/sh /init.galbi.crash.sh
+    class main
+    disabled
+    oneshot
+
+service set_emmc_size /system/bin/sh /set_emmc_size.sh
+    class main
+    user root
+    group media_rw system sdcard_rw
+    disabled
+    oneshot
+
+service smpl_count /system/bin/smpl_count
+    class main
+    user root
+    oneshot
+
+service ssbd /system/bin/ssbd
+    class main
+    socket ssbd stream 0660 root mount
+
+service ssr_diag /system/bin/ssr_diag
+    class late_start
+    user system
+    group system
+
+service ssr_dump /system/bin/subsystem_ramdump 1
+    class late_start
+    user system
+    group system sdcard_r sdcard_rw
+    disabled
+
+service sreadahead /sbin/treadahead
+    oneshot
+    disabled
+
+service sreadahead-check /sbin/sreadahead_check
+    class main
+    user root
+    group root
+    oneshot
+
+service svelteon /system/bin/logwrapper /system/bin/sh /system/etc/init.lge.svelte.sh start
+	user root
+	group system
+	disabled
+	oneshot
+
+service svelteoff /system/bin/logwrapper /system/bin/sh /system/etc/init.lge.svelte.sh stop
+	user root
+	group system
+	disabled
+	oneshot
+
+service thermal-engine /system/bin/thermal-engine
+   class main
+   user root
+   group root
+
+service time_daemon /system/bin/time_daemon
+   class late_start
+   user root
+   group root
+
+service ufips /system/bin/ufips
+    class core
+    user system
+    group system
 
 service usbdebug-manager /system/bin/usbdebug-manager
     class late_start
@@ -713,6 +1113,63 @@ service usbhub_init /system/bin/usbhub_init
    user root
    disabled
    oneshot
+
+service usf-post-boot /system/bin/sh /system/etc/usf_post_boot.sh
+    class late_start
+    user root
+    disabled
+    oneshot
+
+service usf_epos /system/bin/usf_epos
+    user system
+    group system inet
+    disabled
+
+service usf_gesture /system/bin/usf_gesture
+    user system
+    group system inet
+    disabled
+
+service usf_hovering /system/bin/usf_hovering
+    user system
+    group system inet
+    disabled
+
+service usf_p2p /system/bin/usf_p2p
+    user system
+    group system inet
+    disabled
+
+service usf_proximity /system/bin/usf_proximity
+    user system
+    group system inet
+    disabled
+
+service usf_tester /system/bin/usf_tester
+    user system
+    group system inet
+    disabled
+
+service vpnclientpm /system/bin/vpnclientpm3 \
+    -O /data/data/com.ipsec.service/vpnclientpm.txt \
+    -U rmnet0,rmnet_usb0,wlan0,bt-pan,rndis0,p2p0,eth0
+    socket vpnclientpm seqpacket 0666
+    # uid dropped to system when capabilities are set
+    class main
+    group system net_admin net_raw
+    disabled
+
+service wcnss-service /system/bin/wcnss_service
+    class late_start
+    user root
+    group system wifi
+    oneshot
+
+service write_event_log /system/bin/write_event_log 55000
+    user system
+    group system
+    disabled
+    oneshot
 
 service wifi-crda /system/bin/sh /system/etc/init.crda.sh
    class late_start
@@ -759,9 +1216,39 @@ service xtwifi_inet /system/bin/xtwifi-inet-agent
     group inet gps
     disabled
 
+on ffbm
+    start fastmmisrv
+
+on nonencrypted
+    setprop ro.fuse_sdcard ${persist.fuse_sdcard}
+
+on property:bluetooth.aptx_streaming=1
+    start bt-aptx-tuning
+
+on property:bluetooth.aptx_streaming=0
+    start bt-aptx-tuning
+
+on property:bluetooth.hsic_ctrl=load_wlan
+    start bt_hsic_control
+
+on property:bluetooth.hsic_ctrl=unbind_hsic
+    start bt_hsic_control
+
 on property:bluetooth.isEnabled=true
     start btwlancoex
     write /sys/class/bluetooth/hci0/idle_timeout 7000
+
+on chargerlogo
+   stop bootlogo
+   write /sys/class/android_usb/android0/enable 0
+   write /sys/class/android_usb/android0/idVendor 1004
+   write /sys/class/android_usb/android0/idProduct 6300
+   write /sys/class/android_usb/android0/bDeviceClass 0
+   write /sys/class/android_usb/android0/bDeviceSubClass 0
+   write /sys/class/android_usb/android0/bDeviceProtocol 0
+   write /sys/class/android_usb/android0/functions charge_only
+   write /sys/class/android_usb/android0/enable 1
+   exec /sbin/chargerlogo
 
 on property:crypto.driver.load=1
      insmod /system/lib/modules/qce.ko
@@ -777,8 +1264,20 @@ on property:drmdiag.load=1
 on property:drmdiag.load=0
     stop drmdiag
 
+on property:hw.ftm_ptt_start=1
+    start ftm_ptt
+
+on property:hw.ftm_ptt_start=0
+    stop ftm_ptt
+
 on property:init.svc.bootanim=stopped
     start qcom-post-boot
+    start usf-post-boot
+    start write_event_log
+
+on property:init.svc.sdcard=running
+    wait /mnt/shell/emulated/0
+    mount none /mnt/shell/emulated/0 /storage/emulated/legacy bind
 
 on property:init.svc.surfaceflinger=stopped
     stop ppd
@@ -788,11 +1287,69 @@ on property:init.svc.wpa_supplicant=stopped
     stop dhcpcd
     stop dhcp6c
 
+on property:persist.data.ds_fmc_app.mode=1
+    start ds_fmc_appd
+
+on property:persist.ims.regmanager.mode=1
+    start ims_regmanager
+
 on property:persist.service.dsqn=1
     start dsqn
 
 on property:persist.service.dsqn=0
     stop dsqn
+
+on property:persist.service.dm_app.enable=true
+    start lg_dm_router2
+
+on property:persist.service.dm_app.enable=false
+    stop lg_dm_router2
+
+on property:persist.service.crash.enable=0
+    restart service-crash
+
+on property:persist.service.crash.enable=1
+    restart service-crash
+
+on property:persist.service.fakebatt=0
+    write /sys/class/power_supply/battery/pseudo_batt "0 1 100 40 4100000 80 1"
+
+on property:persist.service.fakebatt=1
+    write /sys/class/power_supply/battery/pseudo_batt "1 1 100 40 4100000 80 1"
+
+on property:persist.service.kernel.enable=0
+    stop log-kernel
+
+on property:persist.service.kernel.enable=1
+    restart log-kernel
+
+on property:persist.service.kernel.enable=2
+    restart log-kernel
+
+on property:persist.service.kernel.enable=3
+    restart log-kernel
+
+on property:persist.service.kernel.enable=4
+    restart log-kernel
+
+on property:persist.service.kernel.enable=5
+    restart log-kernel
+
+on property:persist.service.kernel.enable=6
+    restart log-kernel
+
+on property:persist.service.moca.enable=0
+   start moca_service_disable
+
+on property:persist.service.moca.enable=1
+   start moca_service
+   start moca_restart
+
+on property:persist.service.odm_app.enable=true
+    start lg_odm_service
+
+on property:persist.service.odm_log.enable=true
+     start lg_dm_router1
 
 on property:persist.service.rivadump.enable=1
     write /sys/module/pil_pronto/parameters/enable_pronto_ramdump 1
@@ -802,18 +1359,45 @@ on property:persist.service.rivadump.enable=0
     write /sys/module/pil_pronto/parameters/enable_pronto_ramdump 0
     stop riva_ramdump
 
+on property:persist.service.ssr_dump.enable=1
+    write /sys/module/subsystem_restart/parameters/enable_ramdumps 1
+    start ssr_dump
+
+on property:persist.service.ssr_dump.enable=0
+    write /sys/module/subsystem_restart/parameters/enable_ramdumps 0
+    stop ssr_dump
+
 on property:persist.service.usb_ther=true
 
 on property:persist.service.usb_ther=false
 
+on property:persist.sys.ssr.restart_level=1
+    write /sys/module/subsystem_restart/parameters/restart_level 1
+    write /sys/module/wcnss_ssr_8960/parameters/enable_riva_ssr 0
+    write /sys/bus/msm_subsys/devices/subsys0/restart_level system
+    write /sys/bus/msm_subsys/devices/subsys1/restart_level system
+    write /sys/bus/msm_subsys/devices/subsys2/restart_level system
+    write /sys/bus/msm_subsys/devices/subsys3/restart_level system
+
+on property:persist.sys.ssr.restart_level=3
+    write /sys/module/subsystem_restart/parameters/restart_level 3
+    write /sys/module/wcnss_ssr_8960/parameters/enable_riva_ssr 1
+    write /sys/bus/msm_subsys/devices/subsys0/restart_level system
+    write /sys/bus/msm_subsys/devices/subsys1/restart_level related
+    write /sys/bus/msm_subsys/devices/subsys2/restart_level related
+    write /sys/bus/msm_subsys/devices/subsys3/restart_level related
+
 on property:persist.sys.ssr.restart_level_w=*
      start wifi_ssr_setting
 
-on property:bluetooth.aptx_streaming=1
-    start bt-aptx-tuning
+on property:persist.usb.chgdisabled=0
+    write /sys/class/power_supply/battery/charging_enabled 1
 
-on property:bluetooth.aptx_streaming=0
-    start bt-aptx-tuning
+on property:persist.usb.chgdisabled=1
+    write /sys/class/power_supply/battery/charging_enabled 0
+
+on property:ro.baseband="msm"
+   start atd
 
 on property:ro.bluetooth.ftm_enabled=true
     start ftmd
@@ -824,17 +1408,29 @@ on property:ro.board.platform=msm7630_fusion
 on property:ro.boot.emmc=true
     start rmt_storage
 
+on property:ro.boot.svelte=1
+	start svelteon
+
 on property:ro.build.sbp=1
     start runtime_boot_res
 
 on property:ro.data.large_tcp_window_size=true
     write /proc/sys/net/ipv4/tcp_adv_win_scale  2
 
+on property:ro.fuse_sdcard=true
+    start sdcard
+
+on property:ro.lge.zwait=true
+    chown system system /sys/class/zwait/state
+
 on property:ro.qc.bluetooth.stack=bluez
     start dbus
 
 on property:ro.use_data_netmgrd=false
     stop netmgrd
+
+on property:sys.boot_completed=1
+    start qrngp
 
 on property:sys.lge.touchfirmware.update=1
     write /sys/devices/virtual/input/lge_touch/firmware 1
@@ -845,9 +1441,6 @@ on property:sys.mts.forcemts=1
 
 on property:sys.mts.forcemts=0
     stop mtsd
-
-on usb_debug
-    start usbdebug-manager
 
 on property:vold.decrypt=trigger_restart_framework
     setprop ro.fuse_sdcard ${persist.fuse_sdcard}
@@ -860,3 +1453,6 @@ on property:wifi_ftm.diagd_start=1
 
 on property:wifi_ftm.diagd_start=0
     stop diagd
+
+on usb_debug
+    start usbdebug-manager
