@@ -19,6 +19,74 @@
 #
 # Everything in this directory will become public
 
+DEVICE_PACKAGE_OVERLAYS := \
+    device/lge/d851/overlay
+
+# Ramdisk
+PRODUCT_PACKAGES += \
+    fstab.g3 \
+    init.g3.rc \
+    init.galbi.class_core.sh \
+    init.galbi.class_main.sh \
+    init.galbi.crash.sh \
+    init.galbi.early_boot.sh \
+    init.galbi.sh \
+    init.galbi.syspart_fixup.sh \
+    init.galbi.usb.sh \
+    init.galbi-sensor.sh \
+    init.lge.cmm.usb.sh \
+    init.lge.usb.rc \
+    init.lge.usb.sh \
+    init.trace.rc \
+    set_emmc_size.sh \
+    ueventd.g3.rc
+
+# IDC
+PRODUCT_COPY_FILES += \
+    device/lge/d851/idc/keypad-8974.idc:system/usr/idc/keypad-8974.idc \
+    device/lge/d851/idc/qwerty.idc:system/usr/idc/qwerty.idc \
+    device/lge/d851/idc/qwerty2.idc:system/usr/idc/qwerty2.idc \
+    device/lge/d851/idc/synaptics-ts.idc:system/usr/idc/synaptics-ts.idc \
+    device/lge/d851/idc/touch_dev.idc:system/usr/idc/touch_dev.idc
+
+# keychars
+PRODUCT_COPY_FILES += \
+    device/lge/d851/keychars/Generic.kcm:system/usr/keychars/Generic.kcm \
+    device/lge/d851/keychars/qwerty.kcm:system/usr/keychars/qwerty.kcm \
+    device/lge/d851/keychars/qwerty2.kcm:system/usr/keychars/qwerty2.kcm \
+    device/lge/d851/keychars/Virtual.kcm:system/usr/keychars/Virtual.kcm
+
+# keylayout
+PRODUCT_COPY_FILES += \
+    device/lge/d851/keylayout/atmel_mxt_ts.kl:system/usr/keylayout/atmel_mxt_ts.kl \
+    device/lge/d851/keylayout/Button_Jack.kl:system/usr/keylayout/Button_Jack.kl \
+    device/lge/d851/keylayout/gpio-keys.kl:system/usr/keylayout/gpio-keys.kl \
+    device/lge/d851/keylayout/lgps11-keypad.kl:system/usr/keylayout/lgps11-keypad.kl
+
+# Audio
+PRODUCT_COPY_FILES += \
+    device/lge/d851/configs/audio_effects.conf:system/vendor/etc/audio_effects.conf \
+    device/lge/d851/configs/audio_policy.conf:system/etc/audio_policy.conf \
+    device/lge/d851/configs/mixer_paths.xml:system/etc/mixer_paths.xml
+
+# Media
+PRODUCT_COPY_FILES += \
+    device/lge/d851/configs/media_codecs.xml:system/etc/media_codecs.xml \
+    device/lge/d851/configs/media_profiles.xml:system/etc/media_profiles.xml
+
+# Wi-Fi
+PRODUCT_COPY_FILES += \
+    device/lge/d851/configs/bcmdhd.cal:system/etc/wifi/bcmdhd.cal
+
+# GPS
+PRODUCT_COPY_FILES += \
+    device/lge/d851/configs/sec_config:system/etc/sec_config \
+    device/lge/d851/configs/gps.conf:system/etc/gps.conf
+
+# Thermal
+PRODUCT_COPY_FILES += \
+    device/lge/d851/configs/thermal-engine-8974.conf:system/etc/thermal-engine.conf
+
 # These are the hardware-specific features
 PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/handheld_core_hardware.xml:system/etc/permissions/handheld_core_hardware.xml \
@@ -46,8 +114,8 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.hardware.nfc.xml:system/etc/permissions/android.hardware.nfc.xml \
     frameworks/native/data/etc/android.hardware.nfc.hce.xml:system/etc/permissions/android.hardware.nfc.hce.xml \
-    device/lge/d851/nfc/libnfc-brcm.conf:system/etc/libnfc-brcm.conf \
-    device/lge/d851/nfc/libnfc-brcm-20791b05.conf:system/etc/libnfc-brcm-20791b05.conf
+    device/lge/d851/configs/libnfc-brcm.conf:system/etc/libnfc-brcm.conf \
+    device/lge/d851/configs/libnfc-nxp.conf:system/etc/libnfc-nxp.conf
 
 PRODUCT_TAGS += dalvik.gc.type-precise
 
@@ -57,9 +125,6 @@ PRODUCT_TAGS += dalvik.gc.type-precise
 # if the xhdpi doesn't exist.
 PRODUCT_AAPT_CONFIG := normal hdpi xhdpi xxhdpi
 PRODUCT_AAPT_PREF_CONFIG := xxhdpi
-
-DEVICE_PACKAGE_OVERLAYS := \
-    device/lge/d851/overlay
 
 # Live Wallpapers
 PRODUCT_PACKAGES += \
@@ -96,9 +161,6 @@ PRODUCT_PACKAGES += \
     libqcomvoiceprocessing \
     libqcomvoiceprocessingdescriptors
 
-PRODUCT_COPY_FILES += \
-    device/lge/d851/audio_effects.conf:system/vendor/etc/audio_effects.conf
-
 PRODUCT_PACKAGES += \
     libqomx_core \
     libmmcamera_interface \
@@ -112,10 +174,6 @@ PRODUCT_PACKAGES += \
 
 PRODUCT_PACKAGES += \
     power.msm8974
-
-# GPS configuration
-PRODUCT_COPY_FILES += \
-    device/lge/d851/gps.conf:system/etc/gps.conf
 
 # GPS
 PRODUCT_PACKAGES += \
@@ -132,7 +190,7 @@ PRODUCT_PACKAGES += \
 
 # NFC packages
 PRODUCT_PACKAGES += \
-    nfc_nci.hammerhead \
+    nfc_nci.d851 \
     NfcNci \
     Tag
 
@@ -144,6 +202,14 @@ PRODUCT_PACKAGES += \
 
 PRODUCT_PACKAGES += \
     com.android.future.usb.accessory
+
+PRODUCT_PACKAGES += \
+    bdAddrLoader
+
+# msm_rng entropy feeder
+PRODUCT_PACKAGES += \
+    qrngd \
+    qrngp
 
 # Filesystem management tools
 PRODUCT_PACKAGES += \
