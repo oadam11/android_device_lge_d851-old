@@ -48,7 +48,7 @@ TARGET_QCOM_MEDIA_VARIANT := caf
 # Kernel
 BOARD_KERNEL_BASE := 0x00000000
 BOARD_KERNEL_PAGESIZE := 2048
-BOARD_KERNEL_CMDLINE := console=ttyHSL0,115200,n8 androidboot.hardware=g3 user_debug=31 msm_rtb.filter=0x0
+BOARD_KERNEL_CMDLINE := console=ttyHSL0,115200,n8 androidboot.hardware=g3 user_debug=31 msm_rtb.filter=0x0 androidboot.selinux=permissive
 BOARD_MKBOOTIMG_ARGS := --kernel_offset 0x8000 --ramdisk_offset 0x2000000 --second_offset 0xf00000 --tags_offset 0x100
 BOARD_KERNEL_IMAGE_NAME := zImage-dtb
 TARGET_KERNEL_SOURCE := kernel/lge/msm8974ac
