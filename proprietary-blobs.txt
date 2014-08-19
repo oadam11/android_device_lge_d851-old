@@ -78,11 +78,11 @@
 /system/etc/firmware/venus.b04
 /system/etc/firmware/venus.mbn
 /system/etc/firmware/venus.mdt
-/system/etc/firmware/keymaster/keymaster.b00
-/system/etc/firmware/keymaster/keymaster.b01
-/system/etc/firmware/keymaster/keymaster.b02
-/system/etc/firmware/keymaster/keymaster.b03
-/system/etc/firmware/keymaster/keymaster.mdt
+/system/etc/firmware/keymaster.b00
+/system/etc/firmware/keymaster.b01
+/system/etc/firmware/keymaster.b02
+/system/etc/firmware/keymaster.b03
+/system/etc/firmware/keymaster.mdt
 /system/lib/hw/camera.msm8974.so
 /system/lib/hw/audio.a2dp.default.so
 /system/lib/hw/audio.primary.default.so
@@ -142,7 +142,6 @@
 /system/vendor/lib/egl/libGLESv1_CM_adreno.so
 /system/vendor/lib/egl/libGLESv2_adreno.so
 /system/vendor/lib/egl/libq3dtools_adreno.so
-/system/vendor/lib/egl/libplayback_adreno.so
 /system/vendor/lib/hw/power.msm8974.so
 /system/vendor/lib/hw/sensors.msm8974.so
 /system/vendor/lib/libacdbloader.so
@@ -319,9 +318,6 @@
 /system/vendor/lib/libOmxWmaDec.so
 /system/vendor/lib/libOpenCL.so
 /system/vendor/lib/libOpenVG.so
-/system/vendor/lib/librs_adreno_sha1.so
-/system/vendor/lib/librs_adreno.so
-/system/vendor/lib/libRSDriver_adreno.so
 /system/vendor/lib/libprofiler_msmadc.so
 /system/vendor/lib/libqc-opt.so
 /system/vendor/lib/libqcci_legacy.so
