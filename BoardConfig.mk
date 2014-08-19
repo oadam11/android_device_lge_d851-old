@@ -49,7 +49,7 @@ TARGET_KERNEL_CONFIG := g3-tmo_us-perf_defconfig
 BOARD_VENDOR_QCOM_GPS_LOC_API_HARDWARE := $(TARGET_BOARD_PLATFORM)
 
 # EGL
-BOARD_EGL_CFG := device/lge/d851/egl.cfg
+BOARD_EGL_CFG := device/lge/d851/configs/egl.cfg
 USE_OPENGL_RENDERER := true
 TARGET_USES_ION := true
 MAX_EGL_CACHE_KEY_SIZE := 12*1024
