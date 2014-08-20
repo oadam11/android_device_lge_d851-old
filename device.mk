@@ -24,8 +24,8 @@ DEVICE_PACKAGE_OVERLAYS := \
 
 # Ramdisk
 PRODUCT_PACKAGES += \
-    fstab.g3 \
-    init.g3.rc \
+    fstab.d851 \
+    init.d851.rc \
     init.galbi.class_core.sh \
     init.galbi.class_main.sh \
     init.galbi.crash.sh \
@@ -39,7 +39,7 @@ PRODUCT_PACKAGES += \
     init.lge.usb.sh \
     init.trace.rc \
     set_emmc_size.sh \
-    ueventd.g3.rc
+    ueventd.d851.rc
 
 # IDC
 PRODUCT_COPY_FILES += \
