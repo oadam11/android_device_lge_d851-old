@@ -1,0 +1,26 @@
+[
+{
+"remote": "cm",
+"repository": "CyanogenMod/android_hardware_qcom_msm8x74",
+"target_path": "hardware/qcom/msm8x74",
+"revision": "cm-11.0"
+},
+{
+"remote": "cm",
+"repository": "CyanogenMod/android_hardware_qcom_msm8960",
+"target_path": "hardware/qcom/msm8960",
+"revision": "cm-11.0"
+},
+{
+"remote": "github",
+"repository": "TeamNightmare/proprietary_vendor_lge",
+"target_path": "vendor/lge",
+"revision": "cm-11.0"
+},
+{
+"remote": "github",
+"repository": "AOSPA-legacy/android_kernel_lge_d85x",
+"target_path": "kernel/lge/msm8974ac",
+"revision": "kitkat"
+}
+]
